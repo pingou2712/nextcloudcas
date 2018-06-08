@@ -6,7 +6,7 @@
     <licence>AGPL</licence>
     <author>Felix Rupp, Leonis Holding, Sixto Martin</author>
     <namespace>UserCAS</namespace>
-    <version>1.4.9</version>
+    <version>1.4.10</version>
     <types>
         <prelogin/>
         <authentication/>
@@ -31,6 +31,6 @@
 
         <lib>curl</lib>
 
-        <owncloud min-version="9.1.6" max-version="10.0.99"/>
+        <owncloud min-version="9.1.6" max-version="10.0.7"/>
     </dependencies>
 </info>
