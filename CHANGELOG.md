@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+Version 1.6.2
+-------------
+* Fixes postLogin signals signature
+
+
 Version 1.6.1
 -------------
 * Fixes 5min logout bug on Nextcloud
