@@ -3,6 +3,7 @@ CHANGELOG
 
 Version 1.6.2
 -------------
+* Changes default value of the autocreate option to "on"
 * Fixes postLogin signals signature
 
 
