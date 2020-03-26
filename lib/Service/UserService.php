@@ -365,7 +365,29 @@ class UserService
     public function updateGroups($user, $groups, $protectedGroups = '', $justCreated = false)
     {
 
-        if (is_string($groups)) $groups = explode(",", $groups);
+        //if (is_string($groups)) $groups = explode(",", $groups);
+//Tu crées les groupes:
+
+	//Je disable cette fonction:
+	//if (is_string($groups)) $groups = explode(",", $groups);
+
+	//Et je fais mon truc:
+	if (is_string($groups))
+		{
+			preg_match_all("/..=([^,]+),/", $groups , $groups);
+			$groups=$groups[1];
+		}  else  
+		{
+			$tmpGROUP=[];
+			foreach ($groups as $group) {
+				preg_match_all("/..=([^,]+),/", $group, $group);
+				$tmpGROUP=array_merge($tmpGROUP, $group[1]);
+			}
+			$groups=$tmpGROUP;
+		}
+
+
+
         if (is_string($protectedGroups)) $protectedGroups = explode(",", $protectedGroups);
 
         $uid = $user->getUID();
