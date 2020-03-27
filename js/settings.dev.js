@@ -18,7 +18,7 @@ $(document).ready(function () {
         }
     });
 
-    $("#user_cas #cas_disable_logout").on('change', function (event) {
+    $("#user_cas #nextcloud_cas_disable_logout").on('change', function (event) {
 
         if ($(this).is(':checked')) {
 

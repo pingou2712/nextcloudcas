@@ -17,6 +17,7 @@
     "Don’t use force login on these client-IPs": "N'utilisez pas la connexion forcée sur ces adresses IP client",
     "Comma separated list of client IP addresses (or address ranges), which won’t be forced to login if \"Force user login\" is enabled (e.g. 192.168.1.1-254,192.168.2.5)": "Liste des adresses IP (ou plages d'adresses) séparées par des virgules, qui ne sera pas obligée de se connecter si \"Forcer la connexion utilisateur\" est activé (par exemple 192.168.1.1-254, 192.168.2.5)",
     "Disable CAS logout (do only OwnCloud logout)": "Désactiver la déconnexion CAS (déconnexion d'Owncloud uniquement)",
+    "Disable Nextcloud logout (if CAS logout)": "Désactiver la déconnection de Nextcloud si il y a une déconnection du serveur CAS",
     "Logout Servers": "Serveurs de déconnexion",
     "Comma separated list of servers which can send logout requests (leave empty if you do not want to restrict logout to defined servers)": "Liste des serveurs séparés par des virgules pouvant envoyer des demandes de déconnexion (laissez vide si vous ne souhaitez pas limiter la déconnexion aux serveurs définis)",
     "Autocreate user after first CAS login?": "Créer l'utilisateur automatiquement après la connexion CAS?",

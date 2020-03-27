@@ -118,6 +118,11 @@ class AppService
     private $casDisableLogout;
 
     /**
+     * @var boolean
+     */
+    private $nextcloudCasDisableLogout;
+
+    /**
      * @var array
      */
     private $casHandleLogoutServers;
@@ -214,6 +219,7 @@ class AppService
 
         $this->casUseProxy = boolval($this->config->getAppValue($this->appName, 'cas_use_proxy', false));
         $this->casDisableLogout = boolval($this->config->getAppValue($this->appName, 'cas_disable_logout', false));
+	$this->nextcloudCasDisableLogout = boolval($this->config->getAppValue($this->appName, 'nextcloud_cas_disable_logout', false));
         $logoutServersArray = explode(",", $this->config->getAppValue($this->appName, 'cas_handlelogout_servers', ''));
         $this->casHandleLogoutServers = array();
         $this->casKeepTicketIds = boolval($this->config->getAppValue($this->appName, 'cas_keep_ticket_ids', false));
@@ -294,9 +300,10 @@ class AppService
                 }
 
                 # Handle logout servers
-                if (!$this->casDisableLogout) {
-
-                    \phpCAS::handleLogoutRequests(true, $this->casHandleLogoutServers);
+                if (!$this->nextcloudCasDisableLogout) {
+			//For Logout Nextcloud if Cas logout
+			\phpCAS::setSingleSignoutCallback([$this,'casSingleSignOut']);
+                        \phpCAS::handleLogoutRequests(true, $this->casHandleLogoutServers);
                 }
 
                 # Handle fixed service URL
@@ -677,6 +684,46 @@ class AppService
     }
 
     /**
+    * Function callback if cas disconnect
+    *
+    * @param string	$ticket
+    */
+    function casSingleSignOut($ticket) 
+    {
+        // Extract the userID from the SAML Request
+        $decoded_logout_rq = urldecode($_POST['logoutRequest']);
+        preg_match(
+            "|<saml:NameID[^>]*>(.*)</saml:NameID>|",
+            $decoded_logout_rq, $tick, PREG_OFFSET_CAPTURE, 3
+	        );
+	$wrappedSamlNameID = preg_replace(
+            '|<saml:NameID[^>]*>|', '', $tick[0][0]
+		);
+	$NameID = preg_replace(
+                '|</saml:NameID>|', '', $wrappedSamlNameID
+		);
+
+	//Kill Session Of UserID:
+	$this->killSessionUserName($NameID);
+    }
+
+    /**
+    * kill the 'username''s session.
+    *
+    * @param string	$username
+    * 	The username of the user.
+    */
+    private function killSessionUserName($username)
+    {
+	$sql = "DELETE FROM oc_authtoken WHERE uid IN(SELECT uid FROM oc_users WHERE uid = ?);";
+        $stmt=\OC::$server->getDatabaseConnection()->prepare($sql);
+	$stmt->bindParam(1,$username,\PDO::PARAM_STR);
+	$stmt->execute();
+
+        return null;
+    }
+
+    /**
      * @return bool
      */
     public function isSetupValid()
@@ -926,6 +973,22 @@ class AppService
     public function setCasDisableLogout($casDisableLogout)
     {
         $this->casDisableLogout = $casDisableLogout;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isNextcloudCasDisableLogout()
+    {
+        return $this->nextcloudCasDisableLogout;
+    }
+
+    /**
+     * @param bool $nextcloudCasDisableLogout
+     */
+    public function setNextcloudCasDisableLogout($nextcloudCasDisableLogout)
+    {
+        $this->nextcloudCasDisableLogout = $nextcloudCasDisableLogout;
     }
 
     /**

@@ -106,6 +106,13 @@ style('user_cas', 'settings');
                 <label class='checkbox'
                        for="cas_disable_logout"><?php p($l->t('Disable CAS logout (do only OwnCloud logout)')); ?></label>
             </p>
+	    
+            <p><input type="checkbox" id="nextcloud_cas_disable_logout"
+                      name="nextcloud_cas_disable_logout" <?php print_unescaped((($_['nextcloud_cas_disable_logout'] === 'true' || $_['nextcloud_cas_disable_logout'] === 'on' || $_['nextcloud_cas_disable_logout'] === '1' || $_['nextcloud_cas_disable_logout'] === '') ? 'checked="checked"' : '')); ?>>
+                <label class='checkbox'
+                       for="nextcloud_cas_disable_logout"><?php p($l->t('Disable Nextcloud logout (if CAS logout)')); ?></label>
+            </p>
+
             <p><input type="checkbox" id="cas_autocreate"
                       name="cas_autocreate" <?php print_unescaped((($_['cas_autocreate'] === 'true' || $_['cas_autocreate'] === 'on' || $_['cas_autocreate'] === '1' || $_['cas_autocreate'] === '') ? 'checked="checked"' : '')); ?>>
                 <label class='checkbox'
@@ -122,7 +129,7 @@ style('user_cas', 'settings');
                         id="cas_handlelogout_servers"
                         name="cas_handlelogout_servers"
                         value="<?php p($_['cas_handlelogout_servers']); ?>"
-                    <?php print_unescaped((($_['cas_disable_logout'] === 'true' || $_['cas_disable_logout'] === 'on' || $_['cas_disable_logout'] === '1') ? 'disabled="disabled"' : '')); ?> />
+                    <?php print_unescaped((($_['nextcloud_cas_disable_logout'] === 'true' || $_['nextcloud_cas_disable_logout'] === 'on' || $_['nextcloud_cas_disable_logout'] === '1') ? 'disabled="disabled"' : '')); ?> />
                 <span class="csh"><?php p($l->t('Comma separated list of servers which can send logout requests (leave empty if you do not want to restrict logout to defined servers)')) ?></span>
             </p>
             <p><input type="checkbox" id="cas_keep_ticket_ids"
