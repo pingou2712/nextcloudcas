@@ -227,17 +227,26 @@ class AdImporter implements ImporterInterface
 
                                 # Filter length to max 64 chars
                                 $groupName = substr($groupName, 0, 64);*/
-                            }
-                            else {
-
-                                $groupCnArray = explode(",", $groupCn);
-                                $groupName = substr($groupCnArray[0], 3,  strlen($groupCnArray[0]));
-                            }
-
-                            if (strlen($groupName) > 0) {
+				if (strlen($groupName) > 0) {
 
                                 $groupsArray[] = $groupName;
+                            	}
                             }
+                            else {
+				////CT A LUI
+                                //$groupCnArray = explode(",", $groupCn);
+                                //$groupName = substr($groupCnArray[0], 3,  strlen($groupCnArray[0]));
+
+				///CT A MOI				
+				//preg_match_all("/..=([^,]+),/", $groupCn, $groupCn);
+				//$groupsArray[]=array_merge($groupsArray, $groupCn[1]);
+				
+				//En fait pas besoin (la fonction UpdateGroup que j'ai deja modifier fait tout le job):Juste fait ca: tu recré le tableau dorigine pour ne pas trop modifier le core...
+				//Mais bon on tourne en rond hein ^^
+				$groupsArray[]=$groupCn;
+                            }
+
+                            
                         }
                     }
                 }
@@ -357,7 +366,7 @@ class AdImporter implements ImporterInterface
 
             if ($this->ldapConnection) {
 
-                $ldapIsBound = ldap_bind($this->ldapConnection, $this->config->getAppValue($this->appName, 'cas_import_ad_user') . "@" . $this->config->getAppValue($this->appName, 'cas_import_ad_domain'), $this->config->getAppValue($this->appName, 'cas_import_ad_password'));
+                $ldapIsBound = ldap_bind($this->ldapConnection, $this->config->getAppValue($this->appName, 'cas_import_ad_user'), $this->config->getAppValue($this->appName, 'cas_import_ad_password'));
 
                 if (!$ldapIsBound) {
 
