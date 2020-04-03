@@ -550,7 +550,7 @@ class UserService
 					//Je me met tout les droits dessus -> de tout les enseignants de la discipline
 					$dataRule['mapping_type']='group';
 					$dataRule['mapping_id']=$unGroup;
-					$dataRule['fileid']=$monRepClasse->get($disciplines[$matches[1]])->getId();
+					$dataRule['fileid']=$monRepClasse->get($disciplines[$Matches[1]])->getId();
 					$dataRule['mask']=31;
 					$dataRule['permissions']=15;
 					$ruleManagerACL->saveRule_moi($dataRule);
