@@ -695,7 +695,9 @@ class UserService
     //COPIE ET MODIF DES FONCTION GROUP
 
 //Fonction A moi =) .... Peut etre pas la meilleure facon mais ca fonctionne
-    public function refreshMountForUser($MonUser) {
+    public function refreshMountForUser($MonUserString) {
+
+$MonUser=\OC::$server->getUserManager()->get($MonUserString);
 
 $LesMount=\OC::$server->getMountProviderCollection()->getMountsForUser($MonUser);
 	foreach($LesMount as $mymount)
