@@ -58,6 +58,11 @@ class AppService
     private $loggingService;
 
     /**
+     * @var \OCA\UserCAS\Service\PhpCasTicketManager $phpCasTicketManager
+     */
+    private $phpCasTicketManager;
+
+    /**
      * @var \OCP\IUserManager $userManager
      */
     private $userManager;
@@ -180,8 +185,9 @@ class AppService
      * @param \OCP\IUserManager $userManager
      * @param \OCP\IUserSession $userSession
      * @param \OCP\IURLGenerator $urlGenerator
+     * @param \OCA\UserCAS\Service\PhpCasTicketManager $phpCasTicketManager
      */
-    public function __construct($appName, IConfig $config, LoggingService $loggingService, IUserManager $userManager, IUserSession $userSession, IURLGenerator $urlGenerator)
+    public function __construct($appName, IConfig $config, LoggingService $loggingService, IUserManager $userManager, IUserSession $userSession, IURLGenerator $urlGenerator, PhpCasTicketManager $phpCasTicketManager)
     {
 
         $this->appName = $appName;
@@ -190,6 +196,7 @@ class AppService
         $this->userManager = $userManager;
         $this->userSession = $userSession;
         $this->urlGenerator = $urlGenerator;
+        $this->phpCasTicketManager = $phpCasTicketManager;
         $this->casInitialized = FALSE;
     }
 
@@ -289,6 +296,12 @@ class AppService
                     \phpCAS::setVerbose(TRUE);
                 }
 
+                //Ticket not register in phpCAS but needed in order to know what ticket for what user...
+                //For SingleSignOut
+                //Warning : function saveTicket must be before \phpCAS::proxy or \phpCAS::client because these functions unset ticket
+                if (!$this->casDisableSinglesignout) {
+                    $this->phpCasTicketManager->saveTicket();
+                }
 
                 # Initialize client
                 if ($this->casUseProxy) {
@@ -302,7 +315,7 @@ class AppService
                 # Handle SingleSignout requests
                 if (!$this->casDisableSinglesignout) {
 
-                    \phpCAS::setSingleSignoutCallback([$this, 'casSingleSignOut']);
+                    \phpCAS::setSingleSignoutCallback([$this->phpCasTicketManager, 'invalidateTokenByTicket']);
                     \phpCAS::handleLogoutRequests(true, $this->casHandleLogoutServers);
                 }
 
@@ -885,55 +898,6 @@ class AppService
         return FALSE;
     }
 
-    /**
-     * Callback function for CAS singleSignOut call
-     *
-     * @author Vincent <https://github.com/pingou2712>
-     *
-     * @param string $ticket Ticket Object
-     */
-    public function casSingleSignOut($ticket)
-    {
-        // Extract the userID from the SAML Request
-        $decodedLogoutRequest = urldecode($_POST['logoutRequest']);
-        preg_match(
-            "|<saml:NameID[^>]*>(.*)</saml:NameID>|",
-            $decodedLogoutRequest, $tick, PREG_OFFSET_CAPTURE, 3
-        );
-        $wrappedSamlNameId = preg_replace(
-            '|<saml:NameID[^>]*>|', '', $tick[0][0]
-        );
-        $nameId = preg_replace(
-            '|</saml:NameID>|', '', $wrappedSamlNameId
-        );
-
-        //Kill Session Of UserID:
-        $this->killSessionUserName($nameId);
-    }
-
-    /**
-     * Kill the username's session.
-     *
-     * @author Vincent <https://github.com/pingou2712>
-     *
-     * @param string $username The username of the user.
-     * @return NULL
-     */
-    private function killSessionUserName($username)
-    {
-
-        if ($this->userManager->userExists($username)) {
-
-            $sql = "DELETE FROM oc_authtoken WHERE uid = ?;";
-            $stmt = \OC::$server->getDatabaseConnection()->prepare($sql);
-            $stmt->bindParam(1, $username, \PDO::PARAM_STR);
-            $stmt->execute();
-        }
-
-        return NULL;
-    }
-
-
     ## Setters/Getters
 
     /**
@@ -974,5 +938,13 @@ class AppService
     public function getCasPath()
     {
         return $this->casPath;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getCasDisableSinglesignout()
+    {
+        return $this->casDisableSinglesignout;
     }
 }

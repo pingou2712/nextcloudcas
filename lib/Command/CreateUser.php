@@ -5,6 +5,7 @@ namespace OCA\UserCAS\Command;
 use OCA\UserCAS\Service\AppService;
 use OCA\UserCAS\Service\LoggingService;
 use OCA\UserCAS\Service\UserService;
+use \OCA\UserCAS\Service\PhpCasTicketManager;
 
 use OCA\UserCAS\User\Backend;
 use OCA\UserCAS\User\NextBackend;
@@ -43,6 +44,11 @@ class CreateUser extends Command
      * @var AppService
      */
     protected $appService;
+
+    /**
+     * @var PhpCasTicketManager
+     */
+    protected $phpCasTicketManager;
 
     /**
      * @var IUserManager
@@ -90,8 +96,10 @@ class CreateUser extends Command
         $logger = \OC::$server->getLogger();
         $urlGenerator = \OC::$server->getURLGenerator();
 
+        $phpCasTicketManager = \OC::$server->query(PhpCasTicketManager::class);
         $loggingService = new LoggingService('user_cas', $config, $logger);
-        $this->appService = new AppService('user_cas', $config, $loggingService, $userManager, $userSession, $urlGenerator);
+        $this->appService = new AppService('user_cas', $config, $loggingService, $userManager, $userSession, $urlGenerator, $phpCasTicketManager);
+
 
         $userService = new UserService(
             'user_cas',
@@ -100,7 +108,8 @@ class CreateUser extends Command
             $userSession,
             $groupManager,
             $this->appService,
-            $loggingService
+            $loggingService,
+            $phpCasTicketManager
         );
 
         if ($this->appService->isNotNextcloud()) {
