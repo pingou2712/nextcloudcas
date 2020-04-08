@@ -1,0 +1,6 @@
+Le backend n'est pas réelement utilisé sauf au niveau du manager
+Voir source... le backend par defaut "class database" est utilisé par les utilisateur car le manager donne au user le premier backend qui contient lutilisateur et ben c'est database et pas le backend de CAS... dou les modification qui fonctionne bien mais en forceAuthentication mais qui meriterait pas mal de travail pour bien faire tout les cas....ou il n'y a pas force authentication
+-> Soit creer une table pour le backend cas ce qui n'est pas gg car ce serait pas mal de pouvoir prendre l'un ou lautre pour certain cas
+-> Soit retravailler le backend... 
+	* Lorsque l'utilisateur est connecté a cas : tu utilise le chckpassword du cas
+	* sinon tu appelle le parent....
