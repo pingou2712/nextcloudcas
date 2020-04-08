@@ -527,7 +527,7 @@ class UserService
 					$dataRule['permissions']=1;
 					$ruleManagerACL->saveRule_moi($dataRule);
 
-					error_log("TEST DE CONTENU DE VARIABLE:".$dataRule['mapping_type']);
+					//error_log("TEST DE CONTENU DE VARIABLE:".$dataRule['mapping_type']);
 					//$dataRule['mapping_type']='group';
 					$dataRule['mapping_id']="ElevesDe" . $Matches[1] . "eme" . $Matches[2] . "_GS";				
 					//$dataRule['fileid']=$monRep->get($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline)->getId();
