@@ -26,6 +26,7 @@ namespace OCA\UserCAS\Service;
 use OCA\UserCAS\Exception\PhpCas\PhpUserCasLibraryNotFoundException;
 use OCA\UserCas\Service\LoggingService;
 use OCA\UserCAS\User\UserCasBackendInterface;
+use OCA\UserCas\Service\PhpCasTicketManager\PhpCasTicketManager;
 use \OCP\IConfig;
 use \OCP\IUserManager;
 use \OCP\IGroupManager;
@@ -85,6 +86,11 @@ class UserService
      */
     private $loggingService;
 
+    /**
+     * @var PhpCasTicketManager $phpCasTicketManager
+     */
+    private $phpCasTicketManager;
+
 
     /**
      * UserService constructor.
@@ -107,6 +113,7 @@ class UserService
         $this->groupManager = $groupManager;
         $this->appService = $appService;
         $this->loggingService = $loggingService;
+        $this->phpCasTicketManager = new PhpCasTicketManager($config,$userSession->getSession());
     }
 
     /**
@@ -199,7 +206,13 @@ class UserService
 
             if ($loginSuccessful) {
 
-                return $this->userSession->createSessionToken($request, $this->userSession->getUser()->getUID(), $uid, NULL);
+                if ($this->userSession->createSessionToken($request, $this->userSession->getUser()->getUID(), $uid, NULL)) {
+                    if (!$this->appService->getCasDisableSinglesignout())
+                        $this->phpCasTicketManager->saveTokenTicketDb();
+                    return true;
+                } else {
+                    return false;
+                }
             }
 
             $this->loggingService->write(LoggingService::DEBUG, 'phpCAS login function not successful.');
