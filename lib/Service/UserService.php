@@ -580,7 +580,11 @@ class UserService
      */
     public function registerBackend(UserCasBackendInterface $backend)
     {
-
+//Voila la je sors totalement le backend "class database" et le seul qui l'aura alors est le backend cas
+//Je ne peux pas faire cela pour tout les cas...
+//Que se passerait il si le cas user netait pas en force authtication, avec plusuieur backend...
+//Il ne faudrait enlever que la class database....
+        $this->userManager->clearBackends();
         $this->userManager->registerBackend($backend);
     }
 
