@@ -23,6 +23,7 @@
 
 namespace OCA\UserCAS\Service;
 
+use OC\Authentication\Token\IToken;
 use OCA\UserCAS\Exception\PhpCas\PhpUserCasLibraryNotFoundException;
 use OCA\UserCAS\Service\PhpCasTicketManager\PhpCasTicketManager;
 use \OCP\IConfig;
@@ -518,9 +519,10 @@ class AppService
      * Check if login should be enforced using user_cas.
      *
      * @param $remoteAddress
+     * @param string $requestUri
      * @return bool TRUE|FALSE
      */
-    public function isEnforceAuthentication($remoteAddress)
+    public function isEnforceAuthentication($remoteAddress, $requestUri)
     {
 
         $isEnforced = TRUE;
@@ -612,6 +614,12 @@ class AppService
 
         # User already logged in
         if ($this->userSession->isLoggedIn()) {
+
+            $isEnforced = FALSE;
+        }
+
+        # Disable on Nextcloud login-flow use
+        if (!$this->isNotNextcloud() && strpos($requestUri, "/login/flow") !== FALSE) {
 
             $isEnforced = FALSE;
         }
