@@ -655,28 +655,6 @@ class UserService
                     */
                 }
             }
-            else if (preg_match("/Enseignants(.+)_GS/", $unGroup, $Matches)) {
-                $monRepEnseignants = $monRep->get("Enseignants");
-                if (!($monRepEnseignants->nodeExists("Dossier " . $Matches[1]))) {
-                    $monRepEnseignants->newFolder("Dossier " . $Matches[1]);
-
-                    //Refuse les enseignants en général
-                    $dataRule['mapping_type']='group';
-                    $dataRule['mapping_id']='Enseignants_GS';
-                    $dataRule['fileid']=$monRepEnseignants->get("Dossier " . $Matches[1])->getId();
-                    $dataRule['mask']=31;
-                    $dataRule['permissions']=0;
-                    $ruleManagerACL->saveRule_moi($dataRule);
-
-                    //Accepte Tout Le groupe en question
-                    //$dataRule['mapping_type']='group';
-                    $dataRule['mapping_id']='Enseignants' . $Matches[1] . '_GS';
-                    //$dataRule['fileid']=$monRepEnseignants->get("Dossier " . $Matches[1])->getId();
-                    //$dataRule['mask']=31;
-                    $dataRule['permissions']=15;
-                    $ruleManagerACL->saveRule_moi($dataRule);
-                }
-            }
             else if (preg_match("/Enseignants([6543])eme([ABCDEF])_GS/", $unGroup, $Matches)) {
                 $monRepEnseignants = $monRep->get("Enseignants")->get("Dossiers par classes");
                 if (!($monRepEnseignants->nodeExists($Matches[1] . "ème" . $Matches[2]))) {
@@ -694,6 +672,29 @@ class UserService
                     //$dataRule['mapping_type']='group';
                     $dataRule['mapping_id']=$unGroup;
                     $dataRule['fileid']=$monRepEnseignants->get($Matches[1] . "ème" . $Matches[2])->getId();
+                    //$dataRule['mask']=31;
+                    $dataRule['permissions']=15;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+                }
+	    }//La position ici du test suivant est important juste avan on teste une classe
+	    //Si ce n'est pas une classe c'est que c'est une discipline!!!
+	    else if (preg_match("/Enseignants(.+)_GS/", $unGroup, $Matches)) {
+                $monRepEnseignants = $monRep->get("Enseignants");
+                if (!($monRepEnseignants->nodeExists("Dossier " . $Matches[1]))) {
+                    $monRepEnseignants->newFolder("Dossier " . $Matches[1]);
+
+                    //Refuse les enseignants en général
+                    $dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants_GS';
+                    $dataRule['fileid']=$monRepEnseignants->get("Dossier " . $Matches[1])->getId();
+                    $dataRule['mask']=31;
+                    $dataRule['permissions']=0;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+
+                    //Accepte Tout Le groupe en question
+                    //$dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants' . $Matches[1] . '_GS';
+                    //$dataRule['fileid']=$monRepEnseignants->get("Dossier " . $Matches[1])->getId();
                     //$dataRule['mask']=31;
                     $dataRule['permissions']=15;
                     $ruleManagerACL->saveRule_moi($dataRule);
