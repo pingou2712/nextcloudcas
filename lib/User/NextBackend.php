@@ -102,6 +102,18 @@ class NextBackend extends Database implements UserInterface, IUserBackend, IChec
         $this->userService = $userService;
     }
 
+    /**
+     * @inheritdoc
+     * LA aussi ca sort le mot de passe pour tout le monde... Et pour ceux qui ne sont pas connecté par CAS????
+     * Ca marche pour moi mais je ne peux pas lenvoyer tel quel!!!
+     */
+    public function implementsActions($actions): bool
+    {
+        if ($actions & \OC\User\Backend::SET_PASSWORD) {
+            return false;
+        }
+        return parent::implementsActions($actions);
+    }
 
     /**
      * Backend name to be shown in user management
