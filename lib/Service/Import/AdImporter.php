@@ -11,6 +11,7 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Class AdImporter
+ *
  * @package OCA\UserCAS\Service\Import
  *
  * @author Felix Rupp <kontakt@felixrupp.com>
@@ -49,6 +50,7 @@ class AdImporter implements ImporterInterface
 
     /**
      * AdImporter constructor.
+     *
      * @param IConfig $config
      */
     public function __construct(IConfig $config)
@@ -75,6 +77,18 @@ class AdImporter implements ImporterInterface
         $this->logger->info("Init complete.");
     }
 
+    /* Bon la c chiant je sais pas la merde quil a foutu avec ces putain de logger mais bon...*/
+    public function initWithOtherLogger(\OC\Log $logger)
+    {
+        //    $this->merger = new AdUserMerger($logger);
+        $this->logger = $logger;
+
+        $this->ldapConnect();
+        $this->ldapBind();
+
+        $this->logger->info("Init With Other Logger complete.");
+    }
+
     /**
      * @throws \Exception
      */
@@ -82,6 +96,16 @@ class AdImporter implements ImporterInterface
     {
 
         $this->ldapClose();
+    }
+
+    /**
+     * Get sous groupe direct
+     */
+    public function getSousGroupeDirect($dn)
+    {
+        $sr = ldap_list($this->ldapConnection, $dn, "(objectClass=organizationalUnit)");
+        $info = ldap_get_entries($this->ldapConnection, $sr);
+        return $info;
     }
 
     /**
@@ -227,23 +251,23 @@ class AdImporter implements ImporterInterface
 
                                 # Filter length to max 64 chars
                                 $groupName = substr($groupName, 0, 64);*/
-				if (strlen($groupName) > 0) {
+                               if (strlen($groupName) > 0) {
 
                                 $groupsArray[] = $groupName;
-                            	}
+                               }
                             }
                             else {
-				////CT A LUI
+                                ////CT A LUI
                                 //$groupCnArray = explode(",", $groupCn);
                                 //$groupName = substr($groupCnArray[0], 3,  strlen($groupCnArray[0]));
 
-				///CT A MOI				
-				//preg_match_all("/..=([^,]+),/", $groupCn, $groupCn);
-				//$groupsArray[]=array_merge($groupsArray, $groupCn[1]);
-				
-				//En fait pas besoin (la fonction UpdateGroup que j'ai deja modifier fait tout le job):Juste fait ca: tu recré le tableau dorigine pour ne pas trop modifier le core...
-				//Mais bon on tourne en rond hein ^^
-				$groupsArray[]=$groupCn;
+                                ///CT A MOI
+                                //preg_match_all("/..=([^,]+),/", $groupCn, $groupCn);
+                                //$groupsArray[]=array_merge($groupsArray, $groupCn[1]);
+
+                                //En fait pas besoin (la fonction UpdateGroup que j'ai deja modifier fait tout le job):Juste fait ca: tu recré le tableau dorigine pour ne pas trop modifier le core...
+                                //Mais bon on tourne en rond hein ^^
+                                $groupsArray[]=$groupCn;
                             }
 
                             

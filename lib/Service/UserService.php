@@ -34,6 +34,8 @@ use \OCP\IUserSession;
 //POUR LES DOSSIERS:
 use OCP\Constants;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\UserCAS\Service\Import\AdImporter;
+use OCA\UserCAS\Service\Import\ImporterInterface;
 
 use OCA\UserCAS\User\Backend;
 
@@ -85,6 +87,10 @@ class UserService
      */
     private $loggingService;
 
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * UserService constructor.
@@ -107,6 +113,8 @@ class UserService
         $this->groupManager = $groupManager;
         $this->appService = $appService;
         $this->loggingService = $loggingService;
+        $this->disciplinesParClasse = array();
+        $this->logger = \OC::$server->getLogger();
     }
 
     /**
@@ -370,34 +378,34 @@ class UserService
     {
 
         //if (is_string($groups)) $groups = explode(",", $groups);
-//Tu crées les groupes:
+        //Tu crées les groupes:
 
-	//Je disable cette fonction:
-	//if (is_string($groups)) $groups = explode(",", $groups);
+        //Je disable cette fonction:
+        //if (is_string($groups)) $groups = explode(",", $groups);
 
-	//Et je fais mon truc:
-	//Je rajoute array_reverse:c'est pour l'ordre des groupes:
-	//Du plus général au plus petit pour la création des dossier=)
-	//ET en plus je fais un array_unique qui me permets de navoir bahhh qu'un seul groupe a la fois.
-	//Le array_unique conserve la premiere reference trouvé! donc c'es ca quil me faut
-	//Attention a l'ordre des fonction unique(merge)
-	if (is_string($groups))
-		{
-			preg_match_all("/..=([^,]+),/", $groups , $groups);
-			$groups=array_unique(array_reverse($groups[1]));
-		}  else  
-		{
-			$tmpGROUP=[];
-			foreach ($groups as $group) {
-				preg_match_all("/..=([^,]+),/", $group, $group);
-				$tmpGROUP=array_merge($tmpGROUP, array_reverse($group[1]));
-			}
-			$groups=array_unique($tmpGROUP);
-		}
-
+        //Et je fais mon truc:
+        //Je rajoute array_reverse:c'est pour l'ordre des groupes:
+        //Du plus général au plus petit pour la création des dossier=)
+        //ET en plus je fais un array_unique qui me permets de navoir bahhh qu'un seul groupe a la fois.
+        //Le array_unique conserve la premiere reference trouvé! donc c'es ca quil me faut
+        //Attention a l'ordre des fonction unique(merge)
+        if (is_string($groups)) {
+            preg_match_all("/..=([^,]+),/", $groups, $groups);
+            $groups=array_unique(array_reverse($groups[1]));
+        }  else  
+        {
+            $tmpGROUP=[];
+            foreach ($groups as $group) {
+                preg_match_all("/..=([^,]+),/", $group, $group);
+                $tmpGROUP=array_merge($tmpGROUP, array_reverse($group[1]));
+            }
+            $groups=array_unique($tmpGROUP);
+        }
 
 
-        if (is_string($protectedGroups)) $protectedGroups = explode(",", $protectedGroups);
+
+        if (is_string($protectedGroups)) { $protectedGroups = explode(",", $protectedGroups);
+        }
 
         $uid = $user->getUID();
 
@@ -422,7 +430,7 @@ class UserService
             }
         }
 
-//Rajout d'une référence (au lieu de copier) ainsi le travail fait sur l'écriture groupe restera par la suite (création des folder)
+        //Rajout d'une référence (au lieu de copier) ainsi le travail fait sur l'écriture groupe restera par la suite (création des folder)
         foreach ($groups as &$group) {
 
             $groupObject = NULL;
@@ -476,248 +484,283 @@ class UserService
             }
         }
 
-	//DEBUT VRAIMENT de la création des dossiers  (NOUBLIE PAS La FONCTION EN DESSOUS!! =))
-	//
-	$folderManagerACL = new \OCA\GroupFolders\Folder\FolderManager(\OC::$server->getDatabaseConnection());
-	$userMappingManagerACL = new \OCA\GroupFolders\ACL\UserMapping\UserMappingManager($this->groupManager,$this->userManager);
-	$ruleManagerACL = new \OCA\GroupFolders\ACL\RuleManager(\OC::$server->getDatabaseConnection(),$userMappingManagerACL);
-	$monRep=\OC::$server->getRootFolder()->getUserFolder('george.sand');
-	$disciplines = array(
-		'Mathematiques' => 'Mathématiques',
-		'Francais' => 'Français',
-		'HistoireGeographie' => 'Histoire-Géographie');
-	$regexDisciplines="";
-	foreach($disciplines as $key => $discipline)
-	{
-		if ($key == 'Mathematiques')
-		{$regexDisciplines .= $key;}
-		else
-		{$regexDisciplines .= "|" . $key;}
-	}
-	foreach($groups as $unGroup)
-	{
-		if (preg_match ( "/General_([6543])eme([ABCDEF])_GS/" , $unGroup,$Matches))
-		{
-			foreach($disciplines as $key => $discipline)
-			{
-			if (!($monRep->nodeExists($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline)))
-				{
-					$id=$folderManagerACL->createFolder($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline);
-					$folderManagerACL->setFolderACL($id,true);
-					$folderManagerACL->addApplicableGroup($id,'admin');
-					$folderManagerACL->setGroupPermissions($id,'admin',15);
-					$folderManagerACL->setManageACL($id, 'group', 'admin', true);
-					$folderManagerACL->addApplicableGroup($id,"Enseignants" . $key  . $Matches[1] . "eme" . $Matches[2] . "_GS");
-					$folderManagerACL->setGroupPermissions($id,"Enseignants" . $key  . $Matches[1] . "eme" . $Matches[2] . "_GS",15);
-					$folderManagerACL->addApplicableGroup($id,"ElevesDe" . $Matches[1] . "eme" . $Matches[2] . "_GS");
-					$folderManagerACL->setGroupPermissions($id,"ElevesDe" . $Matches[1] . "eme" . $Matches[2] . "_GS",15);
-
-					$this->refreshMountForUser('george.sand');
-					
-					//Les groupes n'existe pas forcément pour le moment...
-					//Ca ma obligé a crée une nouvelle fonction saveRule_moi dans groupfolders...
-					//Ca crée la règle meme si le groupe n'existe pas!
-					//Attention sil ya des mise a jour de group folders... ce truc ne pourrait plus fonctionner...
-					//La parade serait simple:
-					//tu cré la règle pour tout le monde et tu noublie pas de créer une règle pour admin pour le laisser en ecriture!!
-					$dataRule['mapping_type']='group';
-					$dataRule['mapping_id']="Enseignants" . $key  . $Matches[1] . "eme" . $Matches[2] . "_GS";				
-					$dataRule['fileid']=$monRep->get($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline)->getId();
-					$dataRule['mask']=31;
-					$dataRule['permissions']=1;
-					$ruleManagerACL->saveRule_moi($dataRule);
-
-					//error_log("TEST DE CONTENU DE VARIABLE:".$dataRule['mapping_type']);
-					//$dataRule['mapping_type']='group';
-					$dataRule['mapping_id']="ElevesDe" . $Matches[1] . "eme" . $Matches[2] . "_GS";				
-					//$dataRule['fileid']=$monRep->get($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline)->getId();
-					//$dataRule['mask']=31;
-					//$dataRule['permissions']=1;
-					$ruleManagerACL->saveRule_moi($dataRule);
-				}
-			}
-
-		}
-		else if (preg_match ( "/Enseignants(" . $regexDisciplines. ")([6543])eme([ABCDEF])_GS/" , $unGroup,$Matches))
-		{
-				$monRepClasse = $monRep->get($Matches[2] . 'ème' . $Matches[3] . '-' . $disciplines[$Matches[1]]);
-				if (!($monRepClasse->nodeExists($disciplines[$Matches[1]])))
-				{
-					$monRepClasse->newFolder($disciplines[$Matches[1]]);
-				
-					//Je bloque l'ecriture de tout les eleves de 5e? Non C'est herité!!! 
-	
-					//Je me met tout les droits dessus -> de tout les enseignants de la discipline
-					$dataRule['mapping_type']='group';
-					$dataRule['mapping_id']=$unGroup;
-					$dataRule['fileid']=$monRepClasse->get($disciplines[$Matches[1]])->getId();
-					$dataRule['mask']=31;
-					$dataRule['permissions']=15;
-					$ruleManagerACL->saveRule_moi($dataRule);
-
-				}
-		}
-		else if (preg_match ( "/ElevesDe([6543])eme([ABCDEF])_GS/" , $unGroup,$Matches))
-		{
-			foreach($disciplines as $key => $discipline)
-			{
-				$monRepClasse = $monRep->get($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline);
-				if (!($monRepClasse->nodeExists($uid)))
-				{
-					$monRepClasse->newFolder($uid);
-				
-					//Je bloque la lecture de tout les eleves de la classe!!!
-					$dataRule['mapping_type']='group';
-					$dataRule['mapping_id']=$unGroup;
-					$dataRule['fileid']=$monRepClasse->get($uid)->getId();
-					$dataRule['mask']=31;
-					$dataRule['permissions']=0;
-					$ruleManagerACL->saveRule_moi($dataRule);
-	
-					//Je me met tout les droits dessus pour les professeurs De la discipline en question.
-					//$dataRule['mapping_type']='group';
-					$dataRule['mapping_id']="Enseignants" . $key  . $Matches[1] . "eme" . $Matches[2] . "_GS";
-					//$dataRule['fileid']=$monRepClasse->get($uid)->getId();
-					//$dataRule['mask']=31;
-					$dataRule['permissions']=15;
-					$ruleManagerACL->saveRule_moi($dataRule);
-
-					//Je mets tout les droit dessus pour l'eleve en question
-					$dataRule['mapping_type']='user';
-					$dataRule['mapping_id']=$uid;
-					//$dataRule['fileid']=$monRepClasse->get($uid)->getId();
-					//$dataRule['mask']=31;
-					$dataRule['permissions']=15;
-					$ruleManagerACL->saveRule_moi($dataRule);
-				}
-			}
-		}
-		else if ($unGroup=="Enseignants_GS")
-		{
-			if (!($monRep->nodeExists("Enseignants")))
-			{
-				$id=$folderManagerACL->createFolder("Enseignants");
-				$folderManagerACL->setFolderACL($id,true);
-				$folderManagerACL->addApplicableGroup($id,'admin');
-				$folderManagerACL->setGroupPermissions($id,'admin',15);
-				$folderManagerACL->setManageACL($id, 'group', 'admin', true);
-				$folderManagerACL->addApplicableGroup($id,"Enseignants_GS");
-				$folderManagerACL->setGroupPermissions($id,'Enseignants_GS',15);
-				$this->refreshMountForUser('george.sand');
-
-				$dataRule['mapping_type']='group';
-				$dataRule['mapping_id']='Enseignants_GS';				
-				$dataRule['fileid']=$monRep->get("Enseignants")->getId();
-				$dataRule['mask']=31;
-				$dataRule['permissions']=1;
-				$ruleManagerACL->saveRule_moi($dataRule);
-			}
-			$monRepEnseignants = $monRep->get("Enseignants");
-			if (!($monRepEnseignants->nodeExists("Salle des profs")))
-			{
-				$monRepEnseignants->newFolder("Salle des profs");
-				$dataRule['mapping_type']='group';
-				$dataRule['mapping_id']='Enseignants_GS';
-				$dataRule['fileid']=$monRepEnseignants->get("Salle des profs")->getId();
-				$dataRule['mask']=31;
-				$dataRule['permissions']=15;
-				$ruleManagerACL->saveRule_moi($dataRule);
-			}	
-			if (!($monRepEnseignants->nodeExists("Dossiers par classes")))
-			{
-				$monRepEnseignants->newFolder("Dossiers par classes");
-				//Hérité du dossier enseignant
-				/*
-				$dataRule['mapping_type']='group';
-				$dataRule['mapping_id']='Enseignants_GS';
-				$dataRule['fileid']=$monRepEnseignants->get("Salle des profs")->getId();
-				$dataRule['mask']=31;
-				$dataRule['permissions']=15;
-				$ruleManagerACL->saveRule_moi($dataRule);
-				 */
-			}			
-		}
-		else if (preg_match ( "/Enseignants(" . $regexDisciplines. ")_GS/" , $unGroup,$Matches))
-		{
-			$monRepEnseignants = $monRep->get("Enseignants");
-			if (!($monRepEnseignants->nodeExists("Dossier " . $disciplines[$Matches[1]])))
-			{
-				$monRepEnseignants->newFolder("Dossier " . $disciplines[$Matches[1]]);
-
-				//Refuse les enseignants en général
-				$dataRule['mapping_type']='group';
-				$dataRule['mapping_id']='Enseignants_GS';
-				$dataRule['fileid']=$monRepEnseignants->get("Dossier " . $disciplines[$Matches[1]])->getId();
-				$dataRule['mask']=31;
-				$dataRule['permissions']=0;
-				$ruleManagerACL->saveRule_moi($dataRule);
-				
-				//Accepte Tout Le groupe en question
-				//$dataRule['mapping_type']='group';
-				$dataRule['mapping_id']='Enseignants' . $Matches[1] . '_GS';
-				//$dataRule['fileid']=$monRepEnseignants->get($disciplines[$Matches[1]])->getId();
-				//$dataRule['mask']=31;
-				$dataRule['permissions']=15;
-				$ruleManagerACL->saveRule_moi($dataRule);
-			}
-		}
-		else if (preg_match ( "/Enseignants([6543])eme([ABCDEF])_GS/" , $unGroup,$Matches))
-		{
-			$monRepEnseignants = $monRep->get("Enseignants")->get("Dossiers par classes");
-			if (!($monRepEnseignants->nodeExists($Matches[1] . "ème" . $Matches[2])))
-			{
-				$monRepEnseignants->newFolder($Matches[1] . "ème" . $Matches[2]);
-
-				//Refuse les enseignants en général
-				$dataRule['mapping_type']='group';
-				$dataRule['mapping_id']='Enseignants_GS';
-				$dataRule['fileid']=$monRepEnseignants->get($Matches[1] . "ème" . $Matches[2])->getId();
-				$dataRule['mask']=31;
-				$dataRule['permissions']=0;
-				$ruleManagerACL->saveRule_moi($dataRule);
-				
-				//Accepte Tout Le groupe en question
-				//$dataRule['mapping_type']='group';
-				$dataRule['mapping_id']=$unGroup;
-				//$dataRule['fileid']=$monRepEnseignants->get($disciplines[$Matches[1]])->getId();
-				//$dataRule['mask']=31;
-				$dataRule['permissions']=15;
-				$ruleManagerACL->saveRule_moi($dataRule);
-			}
-		}
-
-	}
+        //DEBUT VRAIMENT de la création des dossiers  (NOUBLIE PAS La FONCTION EN DESSOUS!! =))
+        //
+        $folderManagerACL = new \OCA\GroupFolders\Folder\FolderManager(\OC::$server->getDatabaseConnection());
+        $userMappingManagerACL = new \OCA\GroupFolders\ACL\UserMapping\UserMappingManager($this->groupManager, $this->userManager);
+        $ruleManagerACL = new \OCA\GroupFolders\ACL\RuleManager(\OC::$server->getDatabaseConnection(), $userMappingManagerACL);
+        $monRep=\OC::$server->getRootFolder()->getUserFolder('george.sand');
 
 
-    }
 
-  //########################################################################
-    //COPIE ET MODIF DES FONCTION GROUP
+        //Bien ici je vais faire en sorte que les disciplines de l'élève se fasse en fonction des discipine de sa classe se fasse en fonction de sa classe.
+        //Ce la implique mine de rien un tableau (un élève pourra par la suite appartenir a plusieur classe...(pour les groupes). Pour la rétrocompatibilité
+        //Je nutilisarai plus nom => donne un nom avec accent.. c'est la merde car ca se mettra pas a jour automatiquement
+        //cela implique que je mette a jour Et ca peux etre vraiment galère meme si au premier abord il suffirait que je change seulement le nom des groupe
+        //Il faudrait mettre le serveu hors ligne pour etre sur que personne ne se connecte en atendant....
+        // classe        =>    0    =>    1ere discipline
+        //                 1    =>    2nd discipline
+        //                2    =>    3eme discipline
+        // AutreClasse ou groupe=>    0    =>    1ere discipline
+        //OK ca va etre tendu . il va faloir que je fasse une fonction plutot:
+        // genre getDisciplines($classe) => []
+        /*
+        $disciplines = array(
+        'Mathematiques' => 'Mathématiques',
+        'Francais' => 'Français',
+        'HistoireGeographie' => 'Histoire-Géographie');
 
-//Fonction A moi =) .... Peut etre pas la meilleure facon mais ca fonctionne
-    public function refreshMountForUser($MonUserString) {
+        $regexDisciplines="";
+        foreach($disciplines as $key => $discipline)
+        {
+        if ($key == 'Mathematiques')
+        {$regexDisciplines .= $key;}
+        else
+        {$regexDisciplines .= "|" . $key;}
+        }
+        */
 
-$MonUser=\OC::$server->getUserManager()->get($MonUserString);
+        foreach($groups as $unGroup)
+        {
+            if (preg_match("/General_([6543])eme([ABCDEF])_GS/", $unGroup, $Matches)) {
+                $lesDisciplinesDeLaClasses = $this->getDisciplines($Matches[1] . 'eme' . $Matches[2]);
+                foreach($lesDisciplinesDeLaClasses as $discipline)
+                {
+                    if (!($monRep->nodeExists($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline))) {
+                        $id=$folderManagerACL->createFolder($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline);
+                        $folderManagerACL->setFolderACL($id, true);
+                        $folderManagerACL->addApplicableGroup($id, 'admin');
+                        $folderManagerACL->setGroupPermissions($id, 'admin', 15);
+                        $folderManagerACL->setManageACL($id, 'group', 'admin', true);
+                        $folderManagerACL->addApplicableGroup($id, "Enseignants" . $discipline  . $Matches[1] . "eme" . $Matches[2] . "_GS");
+                        $folderManagerACL->setGroupPermissions($id, "Enseignants" . $discipline  . $Matches[1] . "eme" . $Matches[2] . "_GS", 15);
+                        $folderManagerACL->addApplicableGroup($id, "ElevesDe" . $Matches[1] . "eme" . $Matches[2] . "_GS");
+                        $folderManagerACL->setGroupPermissions($id, "ElevesDe" . $Matches[1] . "eme" . $Matches[2] . "_GS", 15);
 
-$LesMount=\OC::$server->getMountProviderCollection()->getMountsForUser($MonUser);
-	foreach($LesMount as $mymount)
-	{
-		//Une idée si l'on savait lequel on voulait exactement mais bon de toute facon 
-		// Un peux plus le long de les refresh tous mais moins de travail ^^
-		// Pour info addMount ne fait que remplacer (ou ajouter) dans un array
-		// Comme clé le getMountPoint
-		// Rsultat s'il existe déja bahhh ca fait rien de plus
-		// S'il existe pas ben ca cré une nouvelle clé
-		//if ($mymount->getMountPoint()=="/george.sand/files/Enseignants/")
-		//{
-			\OC::$server->getMountManager()->addMount($mymount);
-	//		\OC::$server->getUserMountCache()->registerMounts($MonUser, $mymount);
-		//}
+                        $this->refreshMountForUser('george.sand');
 
-	}
+                        //Les groupes n'existe pas forcément pour le moment...
+                        //Ca ma obligé a crée une nouvelle fonction saveRule_moi dans groupfolders...
+                        //Ca crée la règle meme si le groupe n'existe pas!
+                        //Attention sil ya des mise a jour de group folders... ce truc ne pourrait plus fonctionner...
+                        //La parade serait simple:
+                        //tu cré la règle pour tout le monde et tu noublie pas de créer une règle pour admin pour le laisser en ecriture!!
+                        $dataRule['mapping_type']='group';
+                        $dataRule['mapping_id']="Enseignants" . $discipline  . $Matches[1] . "eme" . $Matches[2] . "_GS";
+                        $dataRule['fileid']=$monRep->get($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline)->getId();
+                        $dataRule['mask']=31;
+                        $dataRule['permissions']=1;
+                        $ruleManagerACL->saveRule_moi($dataRule);
+
+                        //error_log("TEST DE CONTENU DE VARIABLE:".$dataRule['mapping_type']);
+                        //$dataRule['mapping_type']='group';
+                        $dataRule['mapping_id']="ElevesDe" . $Matches[1] . "eme" . $Matches[2] . "_GS";
+                        //$dataRule['fileid']=$monRep->get($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline)->getId();
+                        //$dataRule['mask']=31;
+                        //$dataRule['permissions']=1;
+                        $ruleManagerACL->saveRule_moi($dataRule);
+                    }
+                }
+
+            }
+            else if (preg_match("/Enseignants(.+)([6543])eme([ABCDEF])_GS/", $unGroup, $Matches)) {
+                $monRepClasse = $monRep->get($Matches[2] . 'ème' . $Matches[3] . '-' . $Matches[1]);
+                if (!($monRepClasse->nodeExists($Matches[1]))) {
+                    $monRepClasse->newFolder($Matches[1]);
+
+                    //Je bloque l'ecriture de tout les eleves de 5e? Non C'est herité!!!
+
+                    //Je me met tout les droits dessus -> de tout les enseignants de la discipline
+                    $dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']=$unGroup;
+                    $dataRule['fileid']=$monRepClasse->get($Matches[1])->getId();
+                    $dataRule['mask']=31;
+                    $dataRule['permissions']=15;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+
+                }
+            }
+            else if (preg_match("/ElevesDe([6543])eme([ABCDEF])_GS/", $unGroup, $Matches)) {
+                $lesDisciplinesDeLaClasses = $this->getDisciplines($Matches[1] . 'eme' . $Matches[2]);
+                foreach($lesDisciplinesDeLaClasses as $discipline)
+                {
+                    $monRepClasse = $monRep->get($Matches[1] . 'ème' . $Matches[2] . '-' . $discipline);
+                    if (!($monRepClasse->nodeExists($uid))) {
+                        $monRepClasse->newFolder($uid);
+
+                        //Je bloque la lecture de tout les eleves de la classe!!!
+                        $dataRule['mapping_type']='group';
+                        $dataRule['mapping_id']=$unGroup;
+                        $dataRule['fileid']=$monRepClasse->get($uid)->getId();
+                        $dataRule['mask']=31;
+                        $dataRule['permissions']=0;
+                        $ruleManagerACL->saveRule_moi($dataRule);
+
+                        //Je me met tout les droits dessus pour les professeurs De la discipline en question.
+                        //$dataRule['mapping_type']='group';
+                        $dataRule['mapping_id']="Enseignants" . $discipline  . $Matches[1] . "eme" . $Matches[2] . "_GS";
+                        //$dataRule['fileid']=$monRepClasse->get($uid)->getId();
+                        //$dataRule['mask']=31;
+                        $dataRule['permissions']=15;
+                        $ruleManagerACL->saveRule_moi($dataRule);
+
+                        //Je mets tout les droit dessus pour l'eleve en question
+                        $dataRule['mapping_type']='user';
+                        $dataRule['mapping_id']=$uid;
+                        //$dataRule['fileid']=$monRepClasse->get($uid)->getId();
+                        //$dataRule['mask']=31;
+                        $dataRule['permissions']=15;
+                        $ruleManagerACL->saveRule_moi($dataRule);
+                    }
+                }
+            }
+            else if ($unGroup=="Enseignants_GS") {
+                if (!($monRep->nodeExists("Enseignants"))) {
+                    $id=$folderManagerACL->createFolder("Enseignants");
+                    $folderManagerACL->setFolderACL($id, true);
+                    $folderManagerACL->addApplicableGroup($id, 'admin');
+                    $folderManagerACL->setGroupPermissions($id, 'admin', 15);
+                    $folderManagerACL->setManageACL($id, 'group', 'admin', true);
+                    $folderManagerACL->addApplicableGroup($id, "Enseignants_GS");
+                    $folderManagerACL->setGroupPermissions($id, 'Enseignants_GS', 15);
+                    $this->refreshMountForUser('george.sand');
+
+                    $dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants_GS';
+                    $dataRule['fileid']=$monRep->get("Enseignants")->getId();
+                    $dataRule['mask']=31;
+                    $dataRule['permissions']=1;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+                }
+                $monRepEnseignants = $monRep->get("Enseignants");
+                if (!($monRepEnseignants->nodeExists("Salle des profs"))) {
+                    $monRepEnseignants->newFolder("Salle des profs");
+                    $dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants_GS';
+                    $dataRule['fileid']=$monRepEnseignants->get("Salle des profs")->getId();
+                    $dataRule['mask']=31;
+                    $dataRule['permissions']=15;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+                }
+                if (!($monRepEnseignants->nodeExists("Dossiers par classes"))) {
+                    $monRepEnseignants->newFolder("Dossiers par classes");
+                    //Hérité du dossier enseignant
+                    /*
+                    $dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants_GS';
+                    $dataRule['fileid']=$monRepEnseignants->get("Salle des profs")->getId();
+                    $dataRule['mask']=31;
+                    $dataRule['permissions']=15;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+                    */
+                }
+            }
+            else if (preg_match("/Enseignants(.+)_GS/", $unGroup, $Matches)) {
+                $monRepEnseignants = $monRep->get("Enseignants");
+                if (!($monRepEnseignants->nodeExists("Dossier " . $Matches[1]))) {
+                    $monRepEnseignants->newFolder("Dossier " . $Matches[1]);
+
+                    //Refuse les enseignants en général
+                    $dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants_GS';
+                    $dataRule['fileid']=$monRepEnseignants->get("Dossier " . $Matches[1])->getId();
+                    $dataRule['mask']=31;
+                    $dataRule['permissions']=0;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+
+                    //Accepte Tout Le groupe en question
+                    //$dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants' . $Matches[1] . '_GS';
+                    //$dataRule['fileid']=$monRepEnseignants->get("Dossier " . $Matches[1])->getId();
+                    //$dataRule['mask']=31;
+                    $dataRule['permissions']=15;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+                }
+            }
+            else if (preg_match("/Enseignants([6543])eme([ABCDEF])_GS/", $unGroup, $Matches)) {
+                $monRepEnseignants = $monRep->get("Enseignants")->get("Dossiers par classes");
+                if (!($monRepEnseignants->nodeExists($Matches[1] . "ème" . $Matches[2]))) {
+                    $monRepEnseignants->newFolder($Matches[1] . "ème" . $Matches[2]);
+
+                    //Refuse les enseignants en général
+                    $dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']='Enseignants_GS';
+                    $dataRule['fileid']=$monRepEnseignants->get($Matches[1] . "ème" . $Matches[2])->getId();
+                    $dataRule['mask']=31;
+                    $dataRule['permissions']=0;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+
+                    //Accepte Tout Le groupe en question
+                    //$dataRule['mapping_type']='group';
+                    $dataRule['mapping_id']=$unGroup;
+                    $dataRule['fileid']=$monRepEnseignants->get($Matches[1] . "ème" . $Matches[2])->getId();
+                    //$dataRule['mask']=31;
+                    $dataRule['permissions']=15;
+                    $ruleManagerACL->saveRule_moi($dataRule);
+                }
+            }
+
+        }
+
 
     }
- //########################################################################
+
+    //########################################################################
+    private $disciplinesParClasse;
+    public function getDisciplines($classe)
+    {
+        if (!array_key_exists($classe, $this->disciplinesParClasse)) {
+            //On va le chercher dans le ldap
+                $importer = new AdImporter($this->config);
+
+                $importer->initWithOtherLogger($this->logger);
+            //Exemple de dn a aller chercher:
+            //ou=Enseignants4emeA_GS,ou=Enseignants_GS,ou=General_4emeA_GS,ou=ToutLeMonde,dc=george-sand,dc=net
+                $allDisciplines = $importer->getSousGroupeDirect(
+                    "ou=Enseignants" . $classe .
+                    "_GS,ou=Enseignants_GS,ou=General_" . $classe .
+                    "_GS,ou=ToutLeMonde,dc=george-sand,dc=net"
+                );
+            $importer->close();
+            $disciplines = array();
+            foreach($allDisciplines as $key => $value)
+            {
+
+                if ($key !== "count") {
+                    preg_match("/Enseignants(.+)_GS/", $value['ou'][0], $Matches);
+                    $disciplines[] = $Matches[1];
+                }
+            }
+            $this->disciplinesParClasse[$classe] = $disciplines;
+        }
+        return $this->disciplinesParClasse[$classe];
+    }
+
+    //Fonction A moi =) .... Peut etre pas la meilleure facon mais ca fonctionne
+    public function refreshMountForUser($MonUserString)
+    {
+
+        $MonUser=\OC::$server->getUserManager()->get($MonUserString);
+
+        $LesMount=\OC::$server->getMountProviderCollection()->getMountsForUser($MonUser);
+        foreach($LesMount as $mymount)
+        {
+            //Une idée si l'on savait lequel on voulait exactement mais bon de toute facon
+            // Un peux plus le long de les refresh tous mais moins de travail ^^
+            // Pour info addMount ne fait que remplacer (ou ajouter) dans un array
+            // Comme clé le getMountPoint
+            // Rsultat s'il existe déja bahhh ca fait rien de plus
+            // S'il existe pas ben ca cré une nouvelle clé
+            //if ($mymount->getMountPoint()=="/george.sand/files/Enseignants/")
+            //{
+            \OC::$server->getMountManager()->addMount($mymount);
+            //        \OC::$server->getUserMountCache()->registerMounts($MonUser, $mymount);
+            //}
+
+        }
+
+    }
+    //########################################################################
 
     /**
      * @param \OCP\IUser $user
